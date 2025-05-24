@@ -1,16 +1,14 @@
 import { Context, Hono } from 'hono';
 import { proxy } from 'hono/proxy';
-import { PORT } from '../config';
+import { MAX_TIME, PORT } from '../config';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const app = new Hono();
 
 let baseUrl = 'https://ruka64.dev';
-
 let isRunning = false;
-
-const maxTimeSec = 120;
+const maxTimeSec = MAX_TIME ?? 300;
 let remain = 0;
 
 interface WebProxyPostT {
@@ -68,7 +66,7 @@ app.all('*', async (c: Context) => {
   }
   if (!isRunning) {
     c.res.headers.set('Cache-Control', 'max-age=0');
-    return c.redirect('https://ruka64.dev/', 301);
+    return c.redirect('https://webproxy.ruka64.dev/', 301);
   }
   remain = maxTimeSec;
   const urlObj = new URL(c.req.url);
@@ -76,18 +74,13 @@ app.all('*', async (c: Context) => {
   const method = c.req.method;
   const headers = c.req.raw.headers;
   headers.set('host', new URL(baseUrl).host);
-  //? fuck
-  // headers.set('accept-encoding', 'gzip');
   const body = c.req.raw.body;
-  // console.log('headers', headers);
   const buildedUrl = `${baseUrl}${pathNameAndQuery}`;
   const _response = await proxy(buildedUrl, {
     method,
     headers,
     body,
   });
-
-  // console.log('body', _response.body);
 
   const response = new Response(_response.body, _response);
 
